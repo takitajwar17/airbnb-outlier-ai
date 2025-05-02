@@ -92,7 +92,7 @@ const ListingClient: React.FunctionComponent<ListingClientProps> = ({
             listingId: listing?.id,
          })
          .then(() => {
-            toast.success("Listing Reseerved");
+            toast.success("Listing Reserved");
             setDateRange(initialDateRange);
             // Redirect to  /trips
             router.push("/trips");
