@@ -1,4 +1,5 @@
 import prisma from "@/app/libs/prismadb";
+import { SafeReservation } from "../types";
 
 interface IParams {
    listingId?: string;
@@ -34,18 +35,34 @@ export default async function getReservations(params: IParams) {
          },
       });
 
-      const safeReservations = reservations.map((reservation) => ({
-         ...reservation,
-         createdAt: reservation.createdAt.toISOString(),
-         startDate: reservation.startDate.toISOString(),
-         endDate: reservation.endDate.toISOString(),
-         listing: reservation.listing 
-            ? {
-                ...reservation.listing,
-                createdAt: reservation.listing.createdAt.toISOString(),
-              }
-            : null,
-      }));
+      // Map each reservation with error handling for individual records
+      const safeReservations = reservations.reduce<SafeReservation[]>((validReservations, reservation) => {
+         try {
+            // Skip reservations with null listings that can't be safely processed
+            if (!reservation.listing) {
+               console.warn(`Reservation ${reservation.id} has a null listing reference`);
+               return validReservations;
+            }
+
+            // Process valid reservation
+            const safeReservation = {
+               ...reservation,
+               createdAt: reservation.createdAt.toISOString(),
+               startDate: reservation.startDate.toISOString(),
+               endDate: reservation.endDate.toISOString(),
+               listing: {
+                  ...reservation.listing,
+                  createdAt: reservation.listing.createdAt.toISOString(),
+               }
+            };
+            
+            return [...validReservations, safeReservation];
+         } catch (error) {
+            // Log error and skip problematic reservation
+            console.error(`Error processing reservation ${reservation.id}:`, error);
+            return validReservations;
+         }
+      }, []);
 
       return safeReservations;
    } catch (error: any) {

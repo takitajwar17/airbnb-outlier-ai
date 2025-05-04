@@ -14,24 +14,51 @@ const TripsPage = async () => {
          </ClientOnly>
       );
    }
-   const reservations = await getReservations({ userId: currentUser.id });
 
-   if (reservations.length === 0) {
+   try {
+      const reservations = await getReservations({ userId: currentUser.id });
+
+      if (reservations.length === 0) {
+         return (
+            <ClientOnly>
+               <EmptyState
+                  title="No trips found"
+                  subTitle="Looks like you haven't reserved any trips."
+               />
+            </ClientOnly>
+         );
+      }
+
+      // Filter out reservations with null listings before passing to the client
+      const validReservations = reservations.filter(reservation => reservation.listing !== null);
+
+      if (validReservations.length === 0) {
+         return (
+            <ClientOnly>
+               <EmptyState
+                  title="No valid trips found"
+                  subTitle="Some of your trip listings may no longer be available"
+               />
+            </ClientOnly>
+         );
+      }
+
+      return (
+         <ClientOnly>
+            <TripsClient reservations={validReservations} currentUser={currentUser} />
+         </ClientOnly>
+      );
+   } catch (error) {
+      console.error("Error fetching trips:", error);
       return (
          <ClientOnly>
             <EmptyState
-               title="No trips found"
-               subTitle="Looks like you havn't reserved any trips."
+               title="Something went wrong"
+               subTitle="Failed to load your trips. Please try again later."
             />
          </ClientOnly>
       );
    }
-
-   return (
-      <ClientOnly>
-         <TripsClient reservations={reservations} currentUser={currentUser} />
-      </ClientOnly>
-   );
 };
 
 export default TripsPage;
