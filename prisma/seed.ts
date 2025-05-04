@@ -130,6 +130,30 @@ const countries = [
   { value: 'MA', label: 'Morocco', region: 'Africa' }
 ];
 
+// Sample cities for each country
+const citiesByCountry: { [key: string]: string[] } = {
+  'US': ['New York', 'Los Angeles', 'Chicago', 'Miami', 'San Francisco'],
+  'FR': ['Paris', 'Nice', 'Lyon', 'Marseille', 'Bordeaux'],
+  'JP': ['Tokyo', 'Kyoto', 'Osaka', 'Hiroshima', 'Sapporo'],
+  'AU': ['Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide'],
+  'BR': ['Rio de Janeiro', 'São Paulo', 'Salvador', 'Brasília', 'Fortaleza'],
+  'IT': ['Rome', 'Florence', 'Venice', 'Milan', 'Naples'],
+  'ZA': ['Cape Town', 'Johannesburg', 'Durban', 'Pretoria', 'Port Elizabeth'],
+  'CA': ['Toronto', 'Vancouver', 'Montreal', 'Calgary', 'Ottawa'],
+  'IN': ['Mumbai', 'Delhi', 'Bangalore', 'Kolkata', 'Chennai'],
+  'GB': ['London', 'Edinburgh', 'Manchester', 'Liverpool', 'Glasgow'],
+  'TH': ['Bangkok', 'Phuket', 'Chiang Mai', 'Pattaya', 'Krabi'],
+  'ES': ['Barcelona', 'Madrid', 'Seville', 'Valencia', 'Malaga'],
+  'MX': ['Mexico City', 'Cancún', 'Guadalajara', 'Monterrey', 'Playa del Carmen'],
+  'NO': ['Oslo', 'Bergen', 'Trondheim', 'Stavanger', 'Tromsø'],
+  'EG': ['Cairo', 'Alexandria', 'Luxor', 'Aswan', 'Hurghada'],
+  'NZ': ['Auckland', 'Wellington', 'Christchurch', 'Queenstown', 'Rotorua'],
+  'AR': ['Buenos Aires', 'Córdoba', 'Rosario', 'Mendoza', 'Bariloche'],
+  'GR': ['Athens', 'Santorini', 'Mykonos', 'Thessaloniki', 'Crete'],
+  'CN': ['Beijing', 'Shanghai', 'Guangzhou', 'Shenzhen', 'Xi\'an'],
+  'MA': ['Marrakech', 'Casablanca', 'Fez', 'Tangier', 'Rabat']
+};
+
 // Helper function to get random item from array
 function getRandomItem<T>(array: T[]): T {
   return array[Math.floor(Math.random() * array.length)];
@@ -208,6 +232,7 @@ async function main() {
     
     const randomUser = getRandomItem(createdUsers);
     const country = getRandomItem(countries);
+    const city = getRandomItem(citiesByCountry[country.value] || ['Unknown City']);
     
     const listing = await prisma.listing.create({
       data: {
@@ -219,12 +244,13 @@ async function main() {
         bathroomCount: getRandomInt(1, 3),
         guestCount: getRandomInt(1, 10),
         locationValue: country.value,
+        city,
         price: getRandomInt(50, 500),
         userId: randomUser.id,
       }
     });
     
-    console.log(`Created listing: ${listing.title} in ${country.label}`);
+    console.log(`Created listing: ${listing.title} in ${city}, ${country.label}`);
   }
 
   console.log('Seed completed successfully!');

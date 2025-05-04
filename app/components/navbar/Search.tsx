@@ -13,16 +13,26 @@ const Search = () => {
    const { getByValue } = useCountries();
 
    const locationValue = params?.get("locationValue");
+   const city = params?.get("city");
+   const searchTerm = params?.get("searchTerm");
    const startDate = params?.get("startDate");
    const endDate = params?.get("endDate");
    const guestCount = params?.get("guestCount");
 
    const locationLabel = useMemo(() => {
+      if (searchTerm) {
+         return searchTerm;
+      }
+      
       if (locationValue) {
-         return getByValue(locationValue as string)?.label;
+         const country = getByValue(locationValue as string)?.label;
+         if (city) {
+            return `${city}, ${country}`;
+         }
+         return country;
       }
       return "Anywhere";
-   }, [getByValue, locationValue]);
+   }, [getByValue, locationValue, city, searchTerm]);
 
    const durationLabel = useMemo(() => {
       if (startDate && endDate) {
@@ -65,4 +75,5 @@ const Search = () => {
       </div>
    );
 };
+
 export default Search;

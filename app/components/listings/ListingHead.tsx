@@ -11,6 +11,7 @@ interface ListingHeadProps {
    locationValue: string;
    id: string;
    currentUser?: SafeUser | null;
+   city?: string;
 }
 
 const ListingHead: React.FC<ListingHeadProps> = ({
@@ -19,13 +20,20 @@ const ListingHead: React.FC<ListingHeadProps> = ({
    locationValue,
    id,
    currentUser,
+   city,
 }) => {
    const { getByValue } = useCountries();
    const location = getByValue(locationValue);
 
    return (
       <>
-         <Heading title={title} subtitle={`${location?.region}, ${location?.label}`} />
+         <Heading 
+            title={title} 
+            subtitle={city 
+               ? `${city}, ${location?.label}`
+               : location?.label
+            } 
+         />
          <div className="w-full h-[60vh] overflow-hidden rounded-xl relative">
             <Image alt={title} src={imageSrc} fill className="object-cover w-full" />
             <div className="absolute top-5 right-5">

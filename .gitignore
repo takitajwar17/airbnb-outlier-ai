@@ -6,6 +6,7 @@
 .pnp.js
 
 /public/listings.rar
+/public/listings/
 
 # testing
 /coverage

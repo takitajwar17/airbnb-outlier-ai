@@ -45,6 +45,7 @@ const RentModal = () => {
       defaultValues: {
          category: "",
          location: null,
+         city: "",
          guestCount: 1,
          roomCount: 1,
          bathroomCount: 1,
@@ -56,6 +57,7 @@ const RentModal = () => {
    });
 
    const location = watch("location");
+   const city = watch("city");
    const category = watch("category");
    const guestCount = watch("guestCount");
    const roomCount = watch("roomCount");
@@ -160,6 +162,14 @@ const RentModal = () => {
             <CountrySelect
                value={location}
                onChange={(value) => setCustomValue("location", value)}
+            />
+            <Input
+               id="city"
+               label="City"
+               disabled={isLoading}
+               register={register}
+               errors={errors}
+               required
             />
             <Map center={location?.latlng} />
          </div>

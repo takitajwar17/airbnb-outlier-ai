@@ -24,6 +24,7 @@ interface ListingInfoProps {
       | undefined;
 
    locationValue: string;
+   city?: string;
 }
 
 const ListingInfo: React.FC<ListingInfoProps> = ({
@@ -34,6 +35,7 @@ const ListingInfo: React.FC<ListingInfoProps> = ({
    bathroomCount,
    category,
    locationValue,
+   city,
 }) => {
    const { getByValue } = useCountries();
 
@@ -50,6 +52,9 @@ const ListingInfo: React.FC<ListingInfoProps> = ({
                <div>{guestCount} guests.</div>
                <div>{roomCount} rooms.</div>
                <div>{bathroomCount} bathrooms.</div>
+            </div>
+            <div className="font-light text-neutral-500">
+               {city ? `${city}, ${getByValue(locationValue)?.label}` : getByValue(locationValue)?.label}
             </div>
          </div>
          <hr />

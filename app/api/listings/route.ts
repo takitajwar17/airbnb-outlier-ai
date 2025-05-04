@@ -20,6 +20,7 @@ export async function POST(request: Request) {
       bathroomCount,
       guestCount,
       location,
+      city,
       price,
    } = body;
 
@@ -39,6 +40,7 @@ export async function POST(request: Request) {
          bathroomCount,
          guestCount,
          locationValue: location.value,
+         city,
          price: parseInt(price, 10),
          userId: currentUser.id,
       },

@@ -1,7 +1,6 @@
 "use client";
 
 import qs from "query-string";
-import dynamic from "next/dynamic";
 import { useCallback, useMemo, useState } from "react";
 import { Range } from "react-date-range";
 import { formatISO } from "date-fns";
@@ -29,6 +28,8 @@ const SearchModal = () => {
    const [step, setStep] = useState(STEPS.LOCATION);
 
    const [location, setLocation] = useState<CountrySelectValue>();
+   const [city, setCity] = useState('');
+   const [searchTerm, setSearchTerm] = useState('');
    const [guestCount, setGuestCount] = useState(1);
    const [roomCount, setRoomCount] = useState(1);
    const [bathroomCount, setBathroomCount] = useState(1);
@@ -37,14 +38,6 @@ const SearchModal = () => {
       endDate: new Date(),
       key: "selection",
    });
-
-   const Map = useMemo(
-      () =>
-         dynamic(() => import("../Map"), {
-            ssr: false,
-         }),
-      []
-   );
 
    const onBack = useCallback(() => {
       setStep((value) => value - 1);
@@ -65,13 +58,26 @@ const SearchModal = () => {
          currentQuery = qs.parse(params.toString());
       }
 
+      // Prepare query parameters
       const updatedQuery: any = {
          ...currentQuery,
-         locationValue: location?.value,
          guestCount,
          roomCount,
          bathroomCount,
       };
+      
+      // If we have a search term (from the combined city/country input), use it
+      if (searchTerm) {
+         updatedQuery.searchTerm = searchTerm;
+      } else {
+         // Otherwise use the country selector and city input separately
+         if (location) {
+            updatedQuery.locationValue = location.value;
+         }
+         if (city) {
+            updatedQuery.city = city;
+         }
+      }
 
       if (dateRange.startDate) {
          updatedQuery.startDate = formatISO(dateRange.startDate);
@@ -96,6 +102,8 @@ const SearchModal = () => {
       step,
       searchModal,
       location,
+      city,
+      searchTerm,
       router,
       guestCount,
       roomCount,
@@ -124,12 +132,32 @@ const SearchModal = () => {
    let bodyContent = (
       <div className="flex flex-col gap-8">
          <Heading title="Where do you wanna go?" subtitle="Find the perfect location!" />
+         <div className="w-full relative mb-4">
+            <input
+               id="searchTerm"
+               value={searchTerm}
+               onChange={(e) => setSearchTerm(e.target.value)}
+               placeholder="Search for any location..."
+               className="peer w-full p-4 pt-6 font-light bg-white border-2 rounded-md outline-none transition disabled:opacity-70 disabled:cursor-not-allowed pl-4 border-neutral-300 focus:border-neutral-800"
+            />
+         </div>
+         <div className="flex flex-col gap-1">
+            <div className="font-semibold text-neutral-600 text-center">-- OR --</div>
+            <div className="text-sm text-neutral-500 text-center mb-4">Specify exact location</div>
+         </div>
          <CountrySelect
             value={location}
             onChange={(value) => setLocation(value as CountrySelectValue)}
          />
-         <hr />
-         <Map center={location?.latlng} />
+         <div className="w-full relative">
+            <input
+               id="city"
+               value={city}
+               onChange={(e) => setCity(e.target.value)}
+               placeholder="Enter city..."
+               className="peer w-full p-4 pt-6 font-light bg-white border-2 rounded-md outline-none transition disabled:opacity-70 disabled:cursor-not-allowed pl-4 border-neutral-300 focus:border-neutral-800"
+            />
+         </div>
       </div>
    );
 
