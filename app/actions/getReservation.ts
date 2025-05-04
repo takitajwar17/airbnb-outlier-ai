@@ -39,10 +39,12 @@ export default async function getReservations(params: IParams) {
          createdAt: reservation.createdAt.toISOString(),
          startDate: reservation.startDate.toISOString(),
          endDate: reservation.endDate.toISOString(),
-         listing: {
-            ...reservation.listing,
-            createdAt: reservation.listing.createdAt.toISOString(),
-         },
+         listing: reservation.listing 
+            ? {
+                ...reservation.listing,
+                createdAt: reservation.listing.createdAt.toISOString(),
+              }
+            : null,
       }));
 
       return safeReservations;

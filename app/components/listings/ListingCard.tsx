@@ -9,7 +9,7 @@ import HeartButton from "../HeartButton";
 import Button from "../Button";
 
 interface ListingCardProps {
-   data: SafeListing;
+   data: SafeListing | null;
    reservation?: SafeReservation;
    onAction?: (id: string) => void;
    disabled?: boolean;
@@ -29,7 +29,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
 }) => {
    const router = useRouter();
    const { getByValue } = useCountries();
-   const location = getByValue(data.locationValue);
+   
    const handleCancel = useCallback(
       (e: React.MouseEvent<HTMLButtonElement>) => {
          e.stopPropagation();
@@ -42,11 +42,12 @@ const ListingCard: React.FC<ListingCardProps> = ({
    );
 
    const price = useMemo(() => {
+      if (!data) return 0;
       if (reservation) {
          return reservation.totalPrice;
       }
       return data.price;
-   }, [reservation, data.price]);
+   }, [reservation, data]);
 
    const reservationDate = useMemo(() => {
       if (!reservation) {
@@ -58,6 +59,13 @@ const ListingCard: React.FC<ListingCardProps> = ({
 
       return `${format(start, "PP")} - ${format(end, "PP")}`;
    }, [reservation]);
+   
+   // Return null if data is null
+   if (!data) {
+     return null;
+   }
+   
+   const location = getByValue(data.locationValue);
 
    return (
       <div
