@@ -1,61 +1,70 @@
 // This script runs the Prisma seed script with the necessary environment variables
 const { execSync } = require('child_process');
 const path = require('path');
-const readline = require('readline');
 const fs = require('fs');
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
+// Function to get a random integer between min and max (inclusive)
+function getRandomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 
-// Prompt for Cloudinary cloud name
-rl.question('Enter your Cloudinary cloud name (or press Enter to skip Cloudinary upload): ', (cloudName) => {
-  // Update the seed.ts file with the cloud name if provided
-  if (cloudName) {
+// Function to run the seeding process
+async function runSeedProcess(iterationCount = 1, currentIteration = 1) {
+  return new Promise((resolve) => {
+    console.log(`\n[Iteration ${currentIteration}/${iterationCount}] Starting seed process...`);
+    
     try {
+      // Generate random number of users between 5 and 50
+      const userCount = getRandomInt(5, 50);
+      
+      // Update the NUM_USERS constant in seed.ts
       let seedContent = fs.readFileSync(path.join(__dirname, 'prisma', 'seed.ts'), 'utf8');
       seedContent = seedContent.replace(
-        /const CLOUDINARY_URL = 'https:\/\/api\.cloudinary\.com\/v1_1\/.*\/image\/upload';/,
-        `const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/${cloudName}/image/upload';`
+        /const NUM_USERS = \d+;/,
+        `const NUM_USERS = ${userCount};`
       );
-      
-      // Uncomment Cloudinary upload code
-      seedContent = seedContent.replace(
-        '// const imageSrc = await uploadImageToCloudinary(imagePath);',
-        'const imageSrc = await uploadImageToCloudinary(imagePath);'
-      );
-      seedContent = seedContent.replace(
-        '// console.log(`Uploaded image to Cloudinary: ${imageSrc}`);',
-        'console.log(`Uploaded image to Cloudinary: ${imageSrc}`);'
-      );
-      seedContent = seedContent.replace(
-        'const imageSrc = `/listings/${imageFile}`;',
-        '// const imageSrc = `/listings/${imageFile}`;'
-      );
-      
       fs.writeFileSync(path.join(__dirname, 'prisma', 'seed.ts'), seedContent);
-      console.log('Updated seed.ts with Cloudinary cloud name');
+      console.log(`[Iteration ${currentIteration}/${iterationCount}] Set to generate ${userCount} users`);
+      
+      console.log(`[Iteration ${currentIteration}/${iterationCount}] Running Prisma seed script...`);
+      console.log('This will generate completely random data...');
+      
+      // Direct ts-node execution
+      execSync('node_modules\\.bin\\ts-node -P prisma/tsconfig.seed.json prisma/seed.ts', { 
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          DATABASE_URL: process.env.DATABASE_URL
+        } 
+      });
+      
+      console.log(`[Iteration ${currentIteration}/${iterationCount}] Seed completed successfully!`);
+      
+      // If we have more iterations to run, proceed to the next one
+      if (currentIteration < iterationCount) {
+        // Add a small delay between iterations to prevent potential race conditions
+        setTimeout(() => {
+          resolve(runSeedProcess(iterationCount, currentIteration + 1));
+        }, 1000);
+      } else {
+        console.log(`\nAll ${iterationCount} iterations completed successfully!`);
+        resolve();
+      }
     } catch (error) {
-      console.error('Error updating seed.ts:', error);
+      console.error('Error during seed process:', error);
+      resolve();
     }
-  }
+  });
+}
 
-  console.log('Running Prisma seed script...');
-  
-  try {
-    // Direct ts-node execution instead of using npm run
-    execSync('node_modules\\.bin\\ts-node -P prisma/tsconfig.seed.json prisma/seed.ts', { 
-      stdio: 'inherit',
-      env: {
-        ...process.env,
-        DATABASE_URL: process.env.DATABASE_URL // Make sure your DATABASE_URL is set in the environment
-      } 
-    });
-    console.log('Seed completed successfully!');
-  } catch (error) {
-    console.error('Error running seed:', error);
-  }
-  
-  rl.close();
-}); 
+// Get iteration count from command line argument or use default
+const args = process.argv.slice(2);
+const iterationCount = parseInt(args[0]) || 1;
+
+if (iterationCount < 1) {
+  console.log('Invalid number of iterations. Using default of 1.');
+  runSeedProcess(1);
+} else {
+  console.log(`Starting seeding process for ${iterationCount} iterations...`);
+  runSeedProcess(iterationCount);
+} 
