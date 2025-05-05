@@ -50,7 +50,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ currentUser }) => {
          <div className="flex flex-row items-center gap-3">
             <div
                onClick={onCreateItinerary}
-               className="hidden md:block text-sm font-semibold py-3 px-4 rounded-full hover:bg-neutral-100 transition cursor-pointer relative"
+               className="hidden md:block text-sm font-semibold py-3 px-4 rounded-full hover:bg-neutral-100 transition cursor-pointer relative whitespace-nowrap"
             >
                <div className="flex items-center gap-1">
                   <MdOutlineTravelExplore size={16} />
@@ -62,7 +62,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ currentUser }) => {
             </div>
             <div
                onClick={onRent}
-               className="hidden md:block text-sm font-semibold py-3 px-4 rounded-full hover:bg-neutral-100 transition cursor-pointer"
+               className="hidden md:block text-sm font-semibold py-3 px-4 rounded-full hover:bg-neutral-100 transition cursor-pointer whitespace-nowrap"
             >
                Airbnb your home
             </div>
@@ -77,7 +77,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ currentUser }) => {
             </div>
          </div>
          {isOpen && (
-            <div className="absolute rounded-xl shadow-md w-[40vw] md:w-full bg-white overflow-hidden right-0 top-14 text-sm">
+            <div className="absolute rounded-xl shadow-md w-[40vw] md:w-[220px] bg-white overflow-hidden right-0 top-14 text-sm z-50">
                <div className="flex flex-col cursor-pointer">
                   {currentUser ? (
                      <>
@@ -101,9 +101,9 @@ const UserMenu: React.FC<UserMenuProps> = ({ currentUser }) => {
                               setIsOpen(false);
                            }}
                            label={
-                              <div className="flex items-center">
-                                 Create Itinerary
-                                 <span className="bg-rose-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold ml-2">
+                              <div className="flex items-center justify-between w-full">
+                                 <span>Create Itinerary</span>
+                                 <span className="bg-rose-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">
                                     NEW
                                  </span>
                               </div>
