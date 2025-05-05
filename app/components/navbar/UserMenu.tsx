@@ -50,11 +50,14 @@ const UserMenu: React.FC<UserMenuProps> = ({ currentUser }) => {
          <div className="flex flex-row items-center gap-3">
             <div
                onClick={onCreateItinerary}
-               className="hidden md:block text-sm font-semibold py-3 px-4 rounded-full hover:bg-neutral-100 transition cursor-pointer"
+               className="hidden md:block text-sm font-semibold py-3 px-4 rounded-full hover:bg-neutral-100 transition cursor-pointer relative"
             >
                <div className="flex items-center gap-1">
                   <MdOutlineTravelExplore size={16} />
                   <span>Create Itinerary</span>
+               </div>
+               <div className="absolute -top-2 -right-2 bg-rose-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">
+                  NEW
                </div>
             </div>
             <div
@@ -97,7 +100,14 @@ const UserMenu: React.FC<UserMenuProps> = ({ currentUser }) => {
                               router.push("/itineraries/create");
                               setIsOpen(false);
                            }}
-                           label="Create Itinerary"
+                           label={
+                              <div className="flex items-center">
+                                 Create Itinerary
+                                 <span className="bg-rose-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold ml-2">
+                                    NEW
+                                 </span>
+                              </div>
+                           }
                         />
                         <MenuItem
                            onClick={() => {
