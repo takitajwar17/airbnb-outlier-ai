@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
@@ -11,6 +11,7 @@ import Heading from "@/app/components/Heading";
 import Button from "@/app/components/Button";
 import Map from "@/app/components/Map";
 import { searchPhotos } from "@/app/services/unsplash";
+import useCities, { FormattedCity } from "@/app/hooks/useCities";
 import { 
   MdArrowBack, 
   MdOutlineAddLocation, 
@@ -47,6 +48,7 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState(1);
+  const { searchWithSuggestions, getPopularCities } = useCities();
   
   // Form states
   const [tripName, setTripName] = useState("");
@@ -73,6 +75,9 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
   // Unsplash photo states
   const [destinationPhotos, setDestinationPhotos] = useState<{[key: string]: UnsplashPhoto[]}>({});
   const [isLoadingPhotos, setIsLoadingPhotos] = useState(false);
+  
+  // Add debounce for search
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Fetch photos for destinations when they change
   useEffect(() => {
@@ -107,7 +112,7 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
     };
     
     fetchDestinationPhotos();
-  }, [destinations]);
+  }, [destinations, destinationPhotos, imagePreview]);
   
   const handleGoBack = () => {
     if (step > 1) {
@@ -124,35 +129,82 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
   };
   
   const handleDestinationSearch = (query: string) => {
+    // Update the search query state
     setSearchQuery(query);
     
-    // In a real implementation, this would call an API like Google Places
-    // Here we'll simulate some results
-    if (query.length > 1) {
-      const mockResults = [
-        { city: "Paris", country: "France", coordinates: { lat: 48.8566, lng: 2.3522 } },
-        { city: "Rome", country: "Italy", coordinates: { lat: 41.9028, lng: 12.4964 } },
-        { city: "Barcelona", country: "Spain", coordinates: { lat: 41.3851, lng: 2.1734 } },
-        { city: "Tokyo", country: "Japan", coordinates: { lat: 35.6762, lng: 139.6503 } },
-        { city: "New York", country: "United States", coordinates: { lat: 40.7128, lng: -74.006 } },
-        { city: "London", country: "United Kingdom", coordinates: { lat: 51.5074, lng: -0.1278 } },
-        { city: "Sydney", country: "Australia", coordinates: { lat: -33.8688, lng: 151.2093 } }
-      ].filter(place => 
-        place.city.toLowerCase().includes(query.toLowerCase()) || 
-        place.country.toLowerCase().includes(query.toLowerCase())
-      );
-      
-      setSearchResults(mockResults);
-    } else {
-      setSearchResults([]);
+    // Clear any existing timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
     }
+    
+    // Set a new timeout to debounce the search
+    searchTimeoutRef.current = setTimeout(() => {
+      // Get either popular cities or search results based on query
+      const trimmedQuery = query.trim();
+      
+      if (trimmedQuery.length === 0) {
+        // For empty query, show popular cities
+        const popularResults = getPopularCities().map(city => ({
+          city: city.city,
+          country: city.country,
+          coordinates: { lat: city.coordinates.lat, lng: city.coordinates.lng }
+        }));
+        setSearchResults(popularResults.slice(0, 5));
+      } else {
+        // For any search query, only show matching cities
+        console.log("Searching for:", trimmedQuery); // Debug log
+        const results = searchWithSuggestions(trimmedQuery, 7);
+        console.log("Search results:", results.length); // Debug log
+        
+        if (results.length === 0) {
+          console.log("No results found for:", trimmedQuery); // Debug log
+        }
+        
+        const formattedResults = results.map((result: FormattedCity) => ({
+          city: result.city,
+          country: result.country,
+          coordinates: { lat: result.coordinates.lat, lng: result.coordinates.lng }
+        }));
+        
+        setSearchResults(formattedResults);
+      }
+    }, 300); // 300ms debounce
   };
   
+  // Load popular cities only once when component mounts - with proper dependencies
+  useEffect(() => {
+    // Only load popular cities once on initial mount
+    const popularResults = getPopularCities().map(city => ({
+      city: city.city,
+      country: city.country,
+      coordinates: { 
+        lat: city.coordinates.lat, 
+        lng: city.coordinates.lng
+      }
+    }));
+    
+    console.log("Setting initial popular cities");
+    setSearchResults(popularResults.slice(0, 5));
+    
+    // The empty dependency array ensures this only runs once on component mount
+  }, []);
+
   const addDestination = (destination: typeof currentDestination) => {
+    // Add the destination to the list
     setDestinations([...destinations, destination]);
+    
+    // Reset the current destination
     setCurrentDestination({ city: "", country: "", coordinates: { lat: 0, lng: 0 } });
+    
+    // Clear the search query and results
     setSearchQuery("");
     setSearchResults([]);
+    
+    // Cancel any pending search
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
   };
   
   const removeDestination = (index: number) => {
@@ -306,9 +358,22 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
                             key={`${result.city}-${index}`}
                             className="p-3 hover:bg-neutral-50 cursor-pointer border-b border-neutral-100 last:border-b-0"
                             onClick={() => {
+                              // Set the selected destination
                               setCurrentDestination(result);
+                              
+                              // Update the search input with the selected destination
                               setSearchQuery(`${result.city}, ${result.country}`);
+                              
+                              // Clear search results immediately
                               setSearchResults([]);
+                              
+                              // Cancel any pending search to prevent results from reappearing
+                              if (searchTimeoutRef.current) {
+                                clearTimeout(searchTimeoutRef.current);
+                                searchTimeoutRef.current = null;
+                              }
+                              
+                              console.log("Selected destination:", result.city, result.country);
                             }}
                           >
                             <div className="font-medium">{result.city}</div>
