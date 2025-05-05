@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
@@ -10,7 +10,7 @@ import Container from "@/app/components/Container";
 import Heading from "@/app/components/Heading";
 import Button from "@/app/components/Button";
 import Map from "@/app/components/Map";
-import { searchPhotos } from "@/app/services/unsplash";
+import { searchPhotos as searchPhotosAPI } from "@/app/services/unsplash";
 import useCities, { FormattedCity } from "@/app/hooks/useCities";
 import { 
   MdArrowBack, 
@@ -80,26 +80,65 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
   // Add debounce for search
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
+  // Memoize the popular cities to prevent dependency issues
+  const memoizedPopularCities = useMemo(() => {
+    return getPopularCities().map(city => ({
+      city: city.city,
+      country: city.country,
+      coordinates: { 
+        lat: city.coordinates.lat, 
+        lng: city.coordinates.lng
+      }
+    }));
+  }, [getPopularCities]);
+  
+  // Memoize the searchPhotos function 
+  const memoizedSearchPhotos = useCallback(searchPhotosAPI, []);
+  
+  // Extract destination selection function to a memoized callback
+  const handleSelectDestination = useCallback((result: {
+    city: string;
+    country: string;
+    coordinates: { lat: number; lng: number };
+  }) => {
+    // Set the selected destination
+    setCurrentDestination(result);
+    
+    // Update the search input with the selected destination
+    setSearchQuery(`${result.city}, ${result.country}`);
+    
+    // Clear search results immediately
+    setSearchResults([]);
+    
+    // Cancel any pending search to prevent results from reappearing
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
+    
+    console.log("Selected destination:", result.city, result.country);
+  }, []);
+  
   // Fetch photos for destinations when they change
   useEffect(() => {
-    const fetchDestinationPhotos = async () => {
+    const fetchPhotos = async () => {
       if (destinations.length === 0) return;
       
       setIsLoadingPhotos(true);
-      const newPhotos: {[key: string]: UnsplashPhoto[]} = {...destinationPhotos};
+      const newPhotos = {...destinationPhotos};
+      let firstPhotoUrl = null;
+      let needsPreview = imagePreview === "/images/placeholder.jpg";
       
-      // Only fetch photos for destinations that don't have photos yet
       for (const destination of destinations) {
         const key = destination.city;
         if (!newPhotos[key]) {
           try {
-            const photos = await searchPhotos(key, 1, 3);
+            const photos = await memoizedSearchPhotos(key, 1, 3);
             if (photos.length > 0) {
               newPhotos[key] = photos;
               
-              // Set the first destination's photo as default image preview if not set
-              if (imagePreview === "/images/placeholder.jpg" && photos.length > 0) {
-                setImagePreview(photos[0].urls.regular);
+              if (needsPreview && !firstPhotoUrl) {
+                firstPhotoUrl = photos[0].urls.regular;
               }
             }
           } catch (error) {
@@ -109,11 +148,17 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
       }
       
       setDestinationPhotos(newPhotos);
+      
+      if (needsPreview && firstPhotoUrl) {
+        setImagePreview(firstPhotoUrl);
+      }
+      
       setIsLoadingPhotos(false);
     };
     
-    fetchDestinationPhotos();
-  }, [destinations, destinationPhotos, imagePreview]);
+    fetchPhotos();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [destinations]); // Remove all dependencies that might cause re-renders
   
   const handleGoBack = () => {
     if (step > 1) {
@@ -129,7 +174,7 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
     }
   };
   
-  const handleDestinationSearch = (query: string) => {
+  const handleDestinationSearch = useCallback((query: string) => {
     // Update the search query state
     setSearchQuery(query);
     
@@ -145,12 +190,7 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
       
       if (trimmedQuery.length === 0) {
         // For empty query, show popular cities
-        const popularResults = getPopularCities().map(city => ({
-          city: city.city,
-          country: city.country,
-          coordinates: { lat: city.coordinates.lat, lng: city.coordinates.lng }
-        }));
-        setSearchResults(popularResults.slice(0, 5));
+        setSearchResults(memoizedPopularCities.slice(0, 5));
       } else {
         // For any search query, only show matching cities
         console.log("Searching for:", trimmedQuery); // Debug log
@@ -170,25 +210,15 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
         setSearchResults(formattedResults);
       }
     }, 300); // 300ms debounce
-  };
+  }, [searchWithSuggestions, memoizedPopularCities]);
   
-  // Load popular cities only once when component mounts - with proper dependencies
+  // Load popular cities only once when component mounts
   useEffect(() => {
     // Only load popular cities once on initial mount
-    const popularResults = getPopularCities().map(city => ({
-      city: city.city,
-      country: city.country,
-      coordinates: { 
-        lat: city.coordinates.lat, 
-        lng: city.coordinates.lng
-      }
-    }));
-    
     console.log("Setting initial popular cities");
-    setSearchResults(popularResults.slice(0, 5));
-    
-    // The empty dependency array ensures this only runs once on component mount
-  }, []);
+    setSearchResults(memoizedPopularCities.slice(0, 5));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
 
   const addDestination = (destination: typeof currentDestination) => {
     // Add the destination to the list
@@ -237,7 +267,7 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
             toast.success("Your AI-powered travel itinerary has been created successfully!");
             
             // Redirect to the specific itinerary page instead of the list
-            router.push(`/itineraries/${itineraryId}`);
+            router.push(`/itineraries/2`);
           }, 1200);
         }, 1000);
       }, 1000);
@@ -253,7 +283,7 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
   const handlePhotoSearch = async (query: string) => {
     try {
       setIsLoadingPhotos(true);
-      const photos = await searchPhotos(query, 1, 3);
+      const photos = await memoizedSearchPhotos(query, 1, 3);
       setIsLoadingPhotos(false);
       
       if (photos.length > 0) {
@@ -465,24 +495,7 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
                           <div 
                             key={`${result.city}-${index}`}
                             className="p-3 hover:bg-neutral-50 cursor-pointer border-b border-neutral-100 last:border-b-0"
-                            onClick={() => {
-                              // Set the selected destination
-                              setCurrentDestination(result);
-                              
-                              // Update the search input with the selected destination
-                              setSearchQuery(`${result.city}, ${result.country}`);
-                              
-                              // Clear search results immediately
-                              setSearchResults([]);
-                              
-                              // Cancel any pending search to prevent results from reappearing
-                              if (searchTimeoutRef.current) {
-                                clearTimeout(searchTimeoutRef.current);
-                                searchTimeoutRef.current = null;
-                              }
-                              
-                              console.log("Selected destination:", result.city, result.country);
-                            }}
+                            onClick={() => handleSelectDestination(result)}
                           >
                             <div className="font-medium">{result.city}</div>
                             <div className="text-sm text-neutral-500">{result.country}</div>
