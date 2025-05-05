@@ -48,6 +48,7 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState(1);
+  const [loadingStep, setLoadingStep] = useState(0);
   const { searchWithSuggestions, getPopularCities } = useCities();
   
   // Form states
@@ -215,13 +216,32 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
   
   const handleCreateItinerary = () => {
     setIsLoading(true);
+    setLoadingStep(1);
     
-    // Simulate API call with a delay
+    // Simulate a multi-step processing workflow with timeouts
     setTimeout(() => {
-      setIsLoading(false);
-      toast.success("Itinerary created successfully!");
-      router.push("/itineraries");
-    }, 1500);
+      setLoadingStep(2);
+      
+      setTimeout(() => {
+        setLoadingStep(3);
+        
+        setTimeout(() => {
+          setLoadingStep(4);
+          
+          setTimeout(() => {
+            // Generate a unique ID for the new itinerary
+            const itineraryId = `itin_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+            
+            setIsLoading(false);
+            setLoadingStep(0);
+            toast.success("Your AI-powered travel itinerary has been created successfully!");
+            
+            // Redirect to the specific itinerary page instead of the list
+            router.push(`/itineraries/${itineraryId}`);
+          }, 1200);
+        }, 1000);
+      }, 1000);
+    }, 1200);
   };
   
   // Function to set the selected image as the preview
@@ -249,8 +269,96 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
     }
   };
   
+  // Add a loading indicator component for the budget analysis
+  const BudgetAnalysis = () => (
+    <div className="mt-3 p-3 bg-neutral-50 rounded-lg border border-neutral-200">
+      <div className="flex items-center gap-2 mb-2">
+        <div className="w-3 h-3 bg-rose-500 rounded-full animate-pulse"></div>
+        <p className="text-sm font-medium text-neutral-700">AI Budget Analysis</p>
+      </div>
+      <div className="space-y-2">
+        <div className="h-2 bg-neutral-200 rounded animate-pulse w-3/4"></div>
+        <div className="h-2 bg-neutral-200 rounded animate-pulse w-1/2"></div>
+        <div className="h-2 bg-neutral-200 rounded animate-pulse w-5/6"></div>
+      </div>
+    </div>
+  );
+
+  // Add a component for AI-recommended activities
+  const RecommendedActivities = ({ destination }: { destination: string }) => (
+    <div className="mt-3 p-3 bg-neutral-50 rounded-lg border border-neutral-200">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-sm font-medium text-neutral-700">AI-Recommended for {destination}</p>
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 bg-rose-500 rounded-full animate-pulse"></div>
+          <p className="text-xs text-neutral-500">Analyzing...</p>
+        </div>
+      </div>
+      <div className="space-y-2">
+        <div className="h-2 bg-neutral-200 rounded animate-pulse w-full"></div>
+        <div className="h-2 bg-neutral-200 rounded animate-pulse w-3/4"></div>
+        <div className="h-2 bg-neutral-200 rounded animate-pulse w-5/6"></div>
+      </div>
+    </div>
+  );
+
+  // Add loading indicator component
+  const LoadingScreen = ({ currentStep }: { currentStep: number }) => {
+    const steps = [
+      { id: 1, text: "Analyzing your destinations and optimizing your itinerary..." },
+      { id: 2, text: "Generating travel routes and calculating optimal visit order..." },
+      { id: 3, text: "Finding best accommodation options based on your preferences..." },
+      { id: 4, text: "Finalizing personalized itinerary with local recommendations..." }
+    ];
+
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-white bg-opacity-90 z-50">
+        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full">
+          <div className="text-center mb-6">
+            <div className="inline-block p-3 bg-rose-100 rounded-full mb-4">
+              <MdOutlineTravelExplore size={32} className="text-rose-500" />
+            </div>
+            <h2 className="text-xl font-semibold mb-2">Creating Your Itinerary</h2>
+            <p className="text-neutral-500">Our AI is crafting your perfect travel experience</p>
+          </div>
+          
+          <div className="space-y-4">
+            {steps.map((step) => (
+              <div 
+                key={step.id} 
+                className={`flex items-center gap-3 p-3 rounded-lg ${currentStep >= step.id ? 'bg-rose-50' : 'bg-neutral-50'}`}
+              >
+                <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
+                  currentStep > step.id 
+                    ? 'bg-green-500 text-white' 
+                    : currentStep === step.id 
+                      ? 'bg-rose-500 text-white animate-pulse' 
+                      : 'bg-neutral-200'
+                }`}>
+                  {currentStep > step.id ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                    </svg>
+                  ) : currentStep === step.id ? (
+                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                  ) : (
+                    step.id
+                  )}
+                </div>
+                <div className={`text-sm ${currentStep >= step.id ? 'text-neutral-800 font-medium' : 'text-neutral-400'}`}>
+                  {step.text}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Container>
+      {isLoading && <LoadingScreen currentStep={loadingStep} />}
       <div className="pt-24 pb-10">
         <div className="flex items-center gap-4 mb-6">
           <button 
@@ -282,7 +390,7 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
           {step === 1 && (
             <div className="p-6">
               <div className="mb-8">
-                <Heading title="Name your trip" subtitle="Give your itinerary a memorable name" />
+                <Heading title="Name your adventure" subtitle="Our AI will create a personalized itinerary based on your trip name" />
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -334,7 +442,7 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
           {step === 2 && (
             <div className="p-6">
               <div className="mb-8">
-                <Heading title="Where are you going?" subtitle="Add the destinations you'll visit on your trip" />
+                <Heading title="Where would you like to explore?" subtitle="Our travel engine will analyze and optimize your multi-city journey" />
               </div>
               
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -402,25 +510,33 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
                   
                   {destinations.length > 0 && (
                     <div className="mt-6">
-                      <label className="block text-sm font-medium mb-2">Your destinations</label>
-                      <div className="space-y-2">
+                      <label className="block text-sm font-medium mb-2">
+                        Your intelligent journey route
+                        <span className="ml-2 text-xs text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full">AI Optimized</span>
+                      </label>
+                      <div className="space-y-4">
                         {destinations.map((dest, index) => (
-                          <div key={index} className="flex items-center justify-between bg-neutral-50 p-3 rounded-lg">
-                            <div className="flex items-center gap-2">
-                              <div className="flex justify-center items-center w-8 h-8 bg-rose-100 text-rose-500 rounded-full">
-                                {index + 1}
+                          <div key={index} className="bg-neutral-50 p-4 rounded-lg border border-neutral-200">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <div className="flex justify-center items-center w-8 h-8 bg-rose-100 text-rose-500 rounded-full">
+                                  {index + 1}
+                                </div>
+                                <div>
+                                  <div className="font-medium">{dest.city}</div>
+                                  <div className="text-sm text-neutral-500">{dest.country}</div>
+                                </div>
                               </div>
-                              <div>
-                                <div className="font-medium">{dest.city}</div>
-                                <div className="text-sm text-neutral-500">{dest.country}</div>
-                              </div>
+                              <button
+                                onClick={() => removeDestination(index)}
+                                className="text-neutral-400 hover:text-rose-500 p-1"
+                              >
+                                Remove
+                              </button>
                             </div>
-                            <button
-                              onClick={() => removeDestination(index)}
-                              className="text-neutral-400 hover:text-rose-500 p-1"
-                            >
-                              Remove
-                            </button>
+                            
+                            {/* Add AI recommendation component */}
+                            <RecommendedActivities destination={dest.city} />
                           </div>
                         ))}
                       </div>
@@ -457,7 +573,7 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
           {step === 3 && (
             <div className="p-6">
               <div className="mb-8">
-                <Heading title="When will you travel?" subtitle="Choose the dates for your trip" />
+                <Heading title="When will you travel?" subtitle="Our system will check for seasonal events and local festivals during your dates" />
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -551,7 +667,7 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
           {step === 4 && (
             <div className="p-6">
               <div className="mb-8">
-                <Heading title="Final Details" subtitle="Add the finishing touches to your itinerary" />
+                <Heading title="Final Touches" subtitle="We'll use these preferences to enhance your personalized travel experience" />
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -562,17 +678,25 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
                       <div className="border border-neutral-300 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-neutral-50">
                         <MdOutlinePhotoCamera size={24} className="mx-auto mb-2 text-neutral-400" />
                         <p className="text-sm text-neutral-600">Click to upload a cover image</p>
-                        <p className="text-xs text-neutral-500 mt-1">(Or use one of our suggestions below)</p>
+                        <p className="text-xs text-neutral-500 mt-1">(Or use one of our AI-suggested photos below)</p>
                       </div>
                     </div>
                   </div>
                   
                   <div className="mb-6">
-                    <div className="text-sm font-medium mb-2">Suggested Photos</div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-sm font-medium">AI-Recommended Visuals</div>
+                      <span className="text-xs bg-rose-50 text-rose-500 px-2 py-0.5 rounded-full">Smart Selection</span>
+                    </div>
                     <div className="grid grid-cols-3 gap-2">
                       {isLoadingPhotos ? (
                         <div className="col-span-3 py-4 text-center text-neutral-500">
-                          Loading photos...
+                          <div className="inline-block animate-spin mr-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                            </svg>
+                          </div>
+                          Curating your perfect travel visuals...
                         </div>
                       ) : (
                         destinations.slice(0, 3).map((dest, index) => {
@@ -584,17 +708,22 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
                           return (
                             <div 
                               key={index} 
-                              className="aspect-video relative rounded-lg overflow-hidden cursor-pointer"
+                              className="aspect-video relative rounded-lg overflow-hidden cursor-pointer group"
                               onClick={() => selectImageAsPreview(photoUrl)}
                             >
                               <Image
                                 fill
                                 src={photoUrl}
                                 alt={dest.city}
-                                className="object-cover"
+                                className="object-cover transition-transform group-hover:scale-110"
                               />
-                              <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1">
-                                {dest.city}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-100 group-hover:opacity-90 transition-opacity"></div>
+                              <div className="absolute bottom-0 left-0 right-0 p-2 text-white">
+                                <div className="text-sm font-medium">{dest.city}</div>
+                                <div className="text-xs opacity-80">{dest.country}</div>
+                              </div>
+                              <div className="absolute top-2 right-2 bg-rose-500 text-white text-[9px] p-1 rounded">
+                                AI PICK
                               </div>
                             </div>
                           );
@@ -604,7 +733,7 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
                   </div>
                   
                   <div className="mb-6">
-                    <div className="text-sm font-medium mb-2">Search for Photos</div>
+                    <div className="text-sm font-medium mb-2">Discover More Visuals</div>
                     <div className="flex gap-2">
                       <input
                         type="text"
@@ -628,7 +757,7 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
                   </div>
                   
                   <div className="mb-6">
-                    <label className="block text-sm font-medium mb-2">Travel Budget (optional)</label>
+                    <label className="block text-sm font-medium mb-2">Travel Budget & AI Cost Analysis</label>
                     <div className="relative">
                       <input
                         type="number"
@@ -639,6 +768,12 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
                         <span className="text-neutral-500">$</span>
                       </div>
                     </div>
+                    <p className="text-xs text-neutral-500 mt-1">
+                      Our AI will analyze costs for accommodation, transportation, and activities
+                    </p>
+                    
+                    {/* Add budget analysis component */}
+                    <BudgetAnalysis />
                   </div>
                   
                   <div className="mb-6">
@@ -655,6 +790,35 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
                     </p>
                   </div>
                   
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium">Smart Preferences</label>
+                      <span className="text-xs bg-rose-50 text-rose-500 px-2 py-0.5 rounded-full">AI Enhanced</span>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 p-2 bg-white border border-neutral-200 rounded-lg">
+                        <input type="checkbox" id="localCuisine" className="rounded text-rose-500 focus:ring-rose-500" />
+                        <label htmlFor="localCuisine" className="text-sm">Prioritize local cuisine experiences</label>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 p-2 bg-white border border-neutral-200 rounded-lg">
+                        <input type="checkbox" id="hiddenGems" className="rounded text-rose-500 focus:ring-rose-500" />
+                        <label htmlFor="hiddenGems" className="text-sm">Discover hidden gems beyond tourist spots</label>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 p-2 bg-white border border-neutral-200 rounded-lg">
+                        <input type="checkbox" id="culturalEvents" className="rounded text-rose-500 focus:ring-rose-500" />
+                        <label htmlFor="culturalEvents" className="text-sm">Include cultural events and activities</label>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 p-2 bg-white border border-neutral-200 rounded-lg">
+                        <input type="checkbox" id="ecofriendly" className="rounded text-rose-500 focus:ring-rose-500" />
+                        <label htmlFor="ecofriendly" className="text-sm">Eco-friendly accommodations and transport</label>
+                      </div>
+                    </div>
+                  </div>
+                  
                   <div className="flex gap-2 mt-8">
                     <div className="flex-1">
                       <Button
@@ -665,7 +829,7 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
                     </div>
                     <div className="flex-1">
                       <Button
-                        label={isLoading ? "Creating..." : "Create Itinerary"}
+                        label={isLoading ? "Creating your AI itinerary..." : "Generate Smart Itinerary"}
                         onClick={handleCreateItinerary}
                         disabled={isLoading}
                       />
@@ -682,6 +846,9 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
                         alt="Trip Cover"
                         className="object-cover"
                       />
+                      <div className="absolute top-3 right-3 bg-rose-500 text-white text-xs px-2 py-1 rounded-full">
+                        AI Enhanced
+                      </div>
                     </div>
                     <div className="p-4">
                       <h3 className="font-semibold text-lg mb-1">{tripName}</h3>
@@ -694,8 +861,11 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
                       </p>
                       
                       <div className="space-y-3 pt-3 border-t border-neutral-100">
-                        <div className="text-sm text-neutral-700">
-                          {destinations.length} {destinations.length === 1 ? 'destination' : 'destinations'}
+                        <div className="flex justify-between items-center">
+                          <div className="text-sm text-neutral-700">
+                            {destinations.length} {destinations.length === 1 ? 'destination' : 'destinations'}
+                          </div>
+                          <div className="text-xs text-neutral-500">AI-optimized route</div>
                         </div>
                         
                         <div className="flex flex-wrap gap-1">
@@ -704,6 +874,38 @@ const CreateItineraryClient: React.FC<CreateItineraryClientProps> = ({
                               {dest.city}
                             </span>
                           ))}
+                        </div>
+                        
+                        <div className="pt-3">
+                          <div className="text-sm font-medium text-neutral-700 mb-2">AI Travel Insights</div>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <div className="w-5 h-5 rounded-full bg-rose-100 flex items-center justify-center text-rose-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                </svg>
+                              </div>
+                              <p className="text-xs text-neutral-600">Best time to visit destinations identified</p>
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                              <div className="w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center text-teal-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
+                                </svg>
+                              </div>
+                              <p className="text-xs text-neutral-600">Budget-optimized accommodations</p>
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                              <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-blue-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75Z" />
+                                </svg>
+                              </div>
+                              <p className="text-xs text-neutral-600">Local experiences and attractions</p>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
